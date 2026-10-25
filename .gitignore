@@ -1,0 +1,21 @@
+# Data never goes in git: everyone downloads the originals from Kaggle
+/data/
+*.parquet
+HI-*_Trans.csv
+HI-*_Patterns.txt
+
+# Large generated outputs stay local
+artifacts/models/
+artifacts/scores/
+
+# Python and notebooks
+__pycache__/
+.venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Local secrets and editor settings
+.env
+.vscode/
+.idea/
+.DS_Store
