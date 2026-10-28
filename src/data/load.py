@@ -50,8 +50,13 @@ if __name__ == "__main__":
 
     label_counts = {"0": 0, "1": 0}
     missing_counts = {column: 0 for column in CLEAN_COLUMNS}
+    earliest = None
+    latest = None
     for transaction in load_transactions(data_path):
         label = transaction["is_laundering"]
+        timestamp = transaction["timestamp"]
+        earliest = min(earliest, timestamp) if earliest else timestamp
+        latest = max(latest, timestamp) if latest else timestamp
 
         if label not in label_counts:
             raise ValueError(f"Unexpected label at row {transaction['transaction_id']}")
@@ -64,6 +69,9 @@ if __name__ == "__main__":
     print("Legitimate transactions:", label_counts["0"])
     print("Laundering transactions:", label_counts["1"])
     print("Missing values per column:", missing_counts)
+    print("Earliest timestamp:", earliest)
+    print("Latest timestamp:", latest)
+
 
 
     
