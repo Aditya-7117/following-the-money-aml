@@ -43,3 +43,49 @@ class TestLoader(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 list(load_transactions(path))
+
+    def test_invalid_laundering_label(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "invalid_label.csv"
+
+            with path.open("w", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(RAW_COLUMNS)
+                writer.writerow([
+                    "2022/09/01 00:20",
+                    "010", "ACCOUNT_A",
+                    "020", "ACCOUNT_B",
+                    "100", "US Dollar",
+                    "100", "US Dollar",
+                    "Wire", "ABC"
+                ])
+
+            with self.assertRaisesRegex(ValueError, "Invalid laundering label"):
+                list(load_transactions(path))
+    
+    def test_invalid_amounts(self):
+        valid_row = [
+            "2022/09/01 00:20",
+            "010", "ACCOUNT_A",
+            "020", "ACCOUNT_B",
+            "100", "US Dollar",
+            "100", "US Dollar",
+            "Wire", "0"
+        ]
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "invalid_amount.csv"
+
+            for index in (5, 7):
+                for bad_amount in ("ABC", "-5", "nan", "inf"):
+                    row = valid_row.copy()
+                    row[index] = bad_amount
+
+                    with path.open("w", newline="") as file:
+                        writer = csv.writer(file)
+                        writer.writerow(RAW_COLUMNS)
+                        writer.writerow(row)
+
+                    with self.subTest(index=index, amount=bad_amount):
+                        with self.assertRaisesRegex(ValueError, "Invalid amount_"):
+                            list(load_transactions(path))

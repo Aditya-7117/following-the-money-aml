@@ -1,4 +1,5 @@
 import csv
+import math
 from pathlib import Path
 
 RAW_COLUMNS = [
@@ -28,6 +29,18 @@ def load_transactions(csv_path):
 
             transaction = dict(zip(CLEAN_COLUMNS, values))
             transaction["transaction_id"] = row_number
+
+            if transaction["is_laundering"] not in ("0", "1"):
+                raise ValueError(f"Invalid laundering label in row {row_number}")
+            
+            for column in ("amount_received", "amount_paid"):
+                try:
+                    amount = float(transaction[column])
+                except ValueError:
+                    raise ValueError(f"Invalid {column} in row {row_number}")
+
+                if not math.isfinite(amount) or amount < 0:
+                    raise ValueError(f"Invalid {column} in row {row_number}")
 
             yield transaction
 
