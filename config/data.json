@@ -1,0 +1,48 @@
+{
+  "config_version": "1.0",
+  "feature_list_version": "1.0",
+  "feature_columns": [
+    "log_amount_paid",
+    "payment_currency",
+    "payment_format",
+    "same_bank",
+    "sender_txn_count_1h",
+    "sender_txn_count_24h",
+    "sender_unique_receivers_24h",
+    "receiver_txn_count_1h",
+    "receiver_txn_count_24h",
+    "receiver_unique_senders_24h"
+  ],
+  "rolling_window_rules": {
+    "semantics": "strictly open interval on both sides: (t - window, t)",
+    "note": "A transaction at time t uses only transactions whose timestamp prev satisfies t - window < prev < t. The lower bound is exclusive (not inclusive). The handbook Day 2 wording says 'included' but the implementation uses an exclusive lower bound, which is correct per AGENTS.md leak rules. Do not change features.py to match the imprecise handbook text.",
+    "same_minute_scored_before_history_update": true,
+    "window_1h_seconds": 3600,
+    "window_24h_seconds": 86400,
+    "timestamp_format": "%Y/%m/%d %H:%M",
+    "timestamp_granularity": "minute"
+  },
+  "split_boundaries": {
+    "status": "provisional_awaiting_team_approval",
+    "train_cutoff": "2022/09/06 13:36",
+    "val_cutoff": "2022/09/08 16:12",
+    "tail_cutoff": "2022/09/11 00:00",
+    "description": {
+      "train": "timestamp < train_cutoff",
+      "val": "train_cutoff <= timestamp < val_cutoff",
+      "test_main": "val_cutoff <= timestamp < tail_cutoff",
+      "test_tail": "timestamp >= tail_cutoff  (Sep 11-18 ACH-only anomalous tail)"
+    },
+    "note": "test_main and test_tail are physically disjoint. The full test view is their union; it is never a third independent set of rows. Measured counts: train 3,046,861 / val 1,015,602 / test_main 1,014,774 / test_tail 1,108."
+  },
+  "join_key": "transaction_id",
+  "label_column": "is_laundering",
+  "split_assignment_outputs": {
+    "sample": "data/processed/sample_split_assignments.csv",
+    "full": "data/processed/full_split_assignments.csv",
+    "schema": [
+      "transaction_id",
+      "split"
+    ]
+  }
+}
