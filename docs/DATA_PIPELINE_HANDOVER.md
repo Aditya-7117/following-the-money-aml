@@ -1,8 +1,8 @@
 # Data pipeline handover | CSC1181 Group 18
 
-**Contributor:** Aditya Magar (data preparation / Person 1)  
-**Repository:** `following-the-money-aml`  
-**Document prepared:** 22 November 2026  
+**Contributor:** Aditya Magar (data preparation / Person 1)
+**Repository:** `following-the-money-aml`
+**Document prepared:** 22 November 2026
 **Scope:** Data loading, validation, chronological feature generation, split assignment, reproducibility checks, and the outputs handed to EDA, modelling, and evaluation. This is an **engineering handover**, not the group's final academic report.
 
 ## 1. What was completed
