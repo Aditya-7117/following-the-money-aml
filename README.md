@@ -28,6 +28,23 @@ Altman, E. et al. (2023). Realistic Synthetic Financial Transactions for Anti-Mo
 | `artifacts/` | Small recorded outputs, such as check summaries |
 | `notebooks/` | Exploration notebooks, one folder per person |
 
-## Setup
+## Quick start
 
-Setup and run commands are added here as each stage is built and verified.
+Use Python 3.12 on macOS or Linux.
+
+Download the HI-Small dataset from the source
+linked above and place HI-Small_Trans.csv
+inside data/raw/.
+
+Run tests:
+python3.12 -m unittest discover
+
+Generate a sample:
+python3.12 scripts/prepare_data.py --sample
+
+Generate the complete dataset:
+python3.12 scripts/prepare_data.py --full
+
+For complete file explanations, output schemas,
+reproduction steps and troubleshooting, see
+[Data Pipeline Handover](docs/DATA_PIPELINE_HANDOVER.md).
