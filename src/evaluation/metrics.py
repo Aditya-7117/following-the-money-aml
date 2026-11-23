@@ -1,12 +1,12 @@
 """
-Evaluation metrics for the AML project (Priyanka, Person 4).
+src/evaluation/metrics.py
+Evaluation metrics for the laundering class (label 1).
 
-We always measure the LAUNDERING class (label 1).
 - score: the model's suspicion score. Higher = more suspicious.
 - flag:  a transaction is flagged (alerted) when score >= threshold.
 
 If a value cannot be worked out, for example precision when nothing
-is flagged, we return NaN and show it as "n/a". We never turn it into 0.
+is flagged, we return NaN and write it as "n/a". We never turn it into 0.
 """
 
 import math
@@ -16,9 +16,9 @@ from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
     f1_score,
-    precision_recall_curve,
     precision_score,
     recall_score,
+    roc_auc_score,
 )
 
 
@@ -41,31 +41,18 @@ def threshold_metrics(y_true, scores, threshold):
     }
 
 
-def choose_threshold(y_val, val_scores):
-    """Pick the threshold with the best F1. Use VALIDATION data only.
-
-    If two thresholds give the same F1, we keep the higher one,
-    because it raises fewer alerts.
-    """
-    if np.sum(y_val) == 0:
-        raise ValueError("Validation data has no laundering rows")
-
-    precision, recall, thresholds = precision_recall_curve(y_val, val_scores)
-
-    # the last precision/recall pair has no threshold, so we drop it
-    p, r = precision[:-1], recall[:-1]
-    f1 = np.divide(2 * p * r, p + r, out=np.zeros_like(p), where=(p + r) > 0)
-
-    # thresholds are sorted low to high, so the last best one is the highest
-    best = np.flatnonzero(f1 == f1.max())[-1]
-    return thresholds[best]
-
-
 def average_precision(y_true, scores):
-    """Area under the precision-recall curve. NaN if there is no laundering."""
+    """Area under the precision-recall curve (PR-AUC). NaN if there is no laundering."""
     if np.sum(y_true) == 0:
         return np.nan
     return average_precision_score(y_true, scores)
+
+
+def roc_auc(y_true, scores):
+    """Area under the ROC curve. NaN if only one class is present."""
+    if len(np.unique(y_true)) < 2:
+        return np.nan
+    return roc_auc_score(y_true, scores)
 
 
 def recall_at_budget(df, budget=0.01):
@@ -81,9 +68,17 @@ def recall_at_budget(df, budget=0.01):
 
     ranked = df.sort_values(["score", "transaction_id"], ascending=[False, True])
     alerted = ranked.head(n_alerts)
+    not_alerted = ranked.iloc[n_alerts:]
 
     caught = int(alerted["is_laundering"].sum())
     total = int(df["is_laundering"].sum())
+
+    # If many rows share the cut-off score, the ID (not the model) decided
+    # who got an alert. We count those rows so the report can say so.
+    tied_left_out = 0
+    if n_alerts > 0:
+        cutoff_score = alerted["score"].iloc[-1]
+        tied_left_out = int((not_alerted["score"] == cutoff_score).sum())
 
     return {
         "n_rows": len(df),
@@ -91,4 +86,5 @@ def recall_at_budget(df, budget=0.01):
         "laundering_rows": total,
         "caught": caught,
         "recall_at_budget": caught / total if total else np.nan,
+        "tied_rows_left_out": tied_left_out,
     }

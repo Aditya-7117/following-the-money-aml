@@ -1,18 +1,18 @@
 """
-Read HI-Small_Patterns.txt and find the transaction_id of each record.
+src/evaluation/patterns.py
+Read HI-Small_Patterns.txt and link each record to its transaction_id.
 
-The patterns file is used ONLY to check results after the models are done.
-It is never used to build features or to train a model.
+The patterns file is used for evaluation only. It is never used to build
+features or to train a model.
 """
 
 import pandas as pd
 
-# The same 11 column names that Aditya's loader uses
 from src.data.load import CLEAN_COLUMNS
 
 
 def read_patterns(path):
-    """Turn the patterns file into a table with one row per record.
+    """Turn HI-Small_Patterns.txt into a table with one row per record.
 
     The file is made of blocks like this:
         BEGIN LAUNDERING ATTEMPT - FAN-OUT:  Max 16-degree Fan-Out
@@ -48,13 +48,11 @@ def read_patterns(path):
 
 
 def match_patterns(patterns, csv_path, chunk_size=500_000):
-    """Find each pattern record in the transactions CSV.
+    """Find each pattern record in the raw transactions CSV.
 
-    transaction_id is the row number in the raw CSV (1, 2, 3, ...),
-    the same rule Aditya's loader uses, so it joins to his output files.
-
-    We compare all 11 columns as text, so "100.00" only matches "100.00".
-    Each record gets a status:
+    transaction_id is the row number in the raw CSV (1, 2, 3, ...), the
+    same rule the data loader uses. All 11 columns are compared as text,
+    so "100.00" only matches "100.00". Each record gets a status:
       matched   - exactly one CSV row is the same
       unmatched - no CSV row is the same
       ambiguous - several CSV rows are the same (we do NOT pick one)
@@ -100,8 +98,8 @@ def match_patterns(patterns, csv_path, chunk_size=500_000):
     return result.drop(columns="first_id"), n_laundering
 
 
-def coverage_summary(result, n_laundering):
-    """Counts for the report: how many records we could link, and how many not."""
+def pattern_summary(result, n_laundering):
+    """Counts for the report: how many records were linked, and how many not."""
     status = result["status"].value_counts()
     matched = result[result["status"] == "matched"]
 
