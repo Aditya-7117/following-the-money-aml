@@ -1,0 +1,89 @@
+{
+  "data_checks_version": "1.0",
+  "generated_utc": "2026-11-09T20:07:39.081145+00:00",
+  "source": {
+    "raw_transactions_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+    "raw_transactions_file": "data/raw/HI-Small_Trans.csv"
+  },
+  "row_counts": {
+    "total_transactions": 5078345,
+    "legitimate_count": 5073168,
+    "laundering_count": 5177,
+    "laundering_rate_pct": 0.1019,
+    "duplicate_transaction_ids": 0
+  },
+  "timestamp_range": {
+    "earliest": "2022/09/01 00:00",
+    "latest": "2022/09/18 16:18"
+  },
+  "split_counts": {
+    "train": {
+      "total": 3046861,
+      "legitimate": 3044564,
+      "laundering": 2297,
+      "laundering_rate_pct": 0.0754
+    },
+    "val": {
+      "total": 1015602,
+      "legitimate": 1014520,
+      "laundering": 1082,
+      "laundering_rate_pct": 0.1065
+    },
+    "test_main": {
+      "total": 1014774,
+      "legitimate": 1013631,
+      "laundering": 1143,
+      "laundering_rate_pct": 0.1126
+    },
+    "test_tail": {
+      "total": 1108,
+      "legitimate": 453,
+      "laundering": 655,
+      "laundering_rate_pct": 59.1155
+    }
+  },
+  "split_boundaries_used": {
+    "status": "provisional_awaiting_team_approval",
+    "train_cutoff": "2022/09/06 13:36",
+    "val_cutoff": "2022/09/08 16:12",
+    "tail_cutoff": "2022/09/11 00:00"
+  },
+  "feature_schema": {
+    "feature_columns": [
+      "log_amount_paid",
+      "payment_currency",
+      "payment_format",
+      "same_bank",
+      "sender_txn_count_1h",
+      "sender_txn_count_24h",
+      "sender_unique_receivers_24h",
+      "receiver_txn_count_1h",
+      "receiver_txn_count_24h",
+      "receiver_unique_senders_24h"
+    ],
+    "feature_count": 10,
+    "label_column": "is_laundering",
+    "join_key": "transaction_id"
+  },
+  "output_files": {
+    "features_file": "data/processed/full_features.csv",
+    "features_sha256": "90ece10c85f153c2404e2adfa73eebcf087062de891fecb7e1a0ad8d6ab0cce7",
+    "labels_file": "data/processed/full_labels.csv",
+    "labels_sha256": "22b13eeef69fd61a30ed4a9b77a7c316a403724ad76f73450501425ae551b6e8",
+    "split_assignments_file": "data/processed/full_split_assignments.csv",
+    "split_assignments_sha256": "2be7b09550bd5cd2b1aaae6f291f09bf1c8d93fd6a090264593bb12b6bc30e61",
+    "manifest_file": "data/processed/manifest.json"
+  },
+  "checks_passed": [
+    "unique_transaction_ids",
+    "strict_chronological_ordering",
+    "transaction_id_tie_breaking",
+    "1_to_1_label_feature_split_alignment",
+    "finite_numeric_features",
+    "nonnegative_rolling_counts",
+    "schema_isolation_no_leakage_columns",
+    "split_assignments_written"
+  ],
+  "note_tail_payment_formats": "All 1,108 test_tail rows (Sep 11-18) are ACH payments. 655 of 1,108 are laundering (59.12%). Verified against raw CSV.",
+  "note_window_semantics": "Feature windows use a strictly open interval on both sides: (t - window, t). The handbook Day 2 wording says 'included' for the lower bound, but features.py implements exclusive lower bound. This is correct per AGENTS.md leak rules. features.py is not changed."
+}
