@@ -1,0 +1,59 @@
+{
+  "config_version": "1.0",
+  "random_state": 42,
+  "fit_split": "train",
+  "selection_split": "val",
+  "selection_metric": "average_precision",
+  "threshold_rule": "max_f1_on_selection_split",
+  "feature_groups": {
+    "categorical": ["payment_currency", "payment_format"],
+    "boolean": ["same_bank"],
+    "numeric": [
+      "log_amount_paid",
+      "sender_txn_count_1h",
+      "sender_txn_count_24h",
+      "sender_unique_receivers_24h",
+      "receiver_txn_count_1h",
+      "receiver_txn_count_24h",
+      "receiver_unique_senders_24h"
+    ],
+    "log1p_counts": [
+      "sender_txn_count_1h",
+      "sender_txn_count_24h",
+      "sender_unique_receivers_24h",
+      "receiver_txn_count_1h",
+      "receiver_txn_count_24h",
+      "receiver_unique_senders_24h"
+    ]
+  },
+  "models": {
+    "logistic_regression": {
+      "preprocessing": {"scale": true, "log1p_counts": true},
+      "fixed_params": {"max_iter": 2000, "solver": "lbfgs"},
+      "grid": {
+        "class_weight": [null, "balanced"],
+        "C": [0.001, 0.01, 0.1, 1.0, 10.0]
+      }
+    },
+    "naive_bayes": {
+      "preprocessing": {"scale": true, "log1p_counts": true},
+      "fixed_params": {},
+      "grid": {
+        "var_smoothing": [1e-9, 1e-6, 1e-3, 1e-1]
+      }
+    },
+    "decision_tree": {
+      "preprocessing": {"scale": false, "log1p_counts": false},
+      "fixed_params": {"class_weight": "balanced"},
+      "grid": {
+        "max_depth": [4, 6, 8, 10, 12, 16, 20, 24, 32],
+        "min_samples_leaf": [50, 200, 1000, 5000]
+      }
+    }
+  },
+  "notes": {
+    "test_splits": "test_main and test_tail are never loaded by model selection. Hyperparameters and thresholds are chosen on val only.",
+    "selection_metric": "average_precision is sklearn's PR-AUC estimate; it is threshold-free and suited to the ~0.1% positive rate.",
+    "threshold_rule": "After the best configuration is chosen, its decision threshold is set to the value that maximises F1 on val."
+  }
+}
