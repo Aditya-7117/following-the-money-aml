@@ -71,7 +71,7 @@ src/data/split.py          label kept separate
 
 ## 4. Reproduce on your own laptop
 
-Run commands **from the repository's root folder**. The pipeline was developed with Python **3.12** and uses Python's standard library. The full preparation script imports the Unix `resource` module, so these exact commands are intended for **macOS/Linux**, not unmodified native Windows Python.
+Run commands **from the repository's root folder**. The pipeline was developed with Python **3.12** and uses Python's standard library. The data preparation script handles the absence of the Unix `resource` module on Windows gracefully by making `resource` optional; on native Windows Python, peak memory tracking reports `N/A` in terminal summaries and `null` in `manifest.json`, while deterministic CSV generation and split logic remain identical. Commands run cross-platform on macOS, Linux, and Windows (WSL and native). Native Windows compatibility remains to be confirmed on Windows hardware by teammates.
 
 ### A. Get the code and dataset
 
@@ -192,7 +192,7 @@ The tail has **655 / 1,108 = 59.12%** laundering labels, while the main test has
 |---|---|
 | `FileNotFoundError` for raw CSV | Put `HI-Small_Trans.csv` inside `data/raw/` or use `--data-path`. |
 | `python3.12` not found | Install/select Python 3.12; verify the interpreter used to run commands. |
-| `ModuleNotFoundError: resource` | Native Windows Python lacks the Unix module. Run on macOS/Linux, or adapt/test platform handling separately. |
+| `ModuleNotFoundError: resource` | Resolved in `scripts/prepare_data.py`: `resource` import is optional. On Windows, peak memory reports `N/A` (and JSON `null` in manifest) without crashing. Teammates testing on native Windows should confirm this on their machines. |
 | No `data/processed/` on GitHub | Expected: generated datasets are Git-ignored. Run `--sample` or `--full` locally. |
 | Feature/label mismatch | Re-run preparation, compare `transaction_id` and verify `manifest.json` hashes. |
 | Different split counts | Confirm that everyone uses the same raw CSV hash and `config/data.json` cutoffs. |
@@ -203,6 +203,7 @@ The tail has **655 / 1,108 = 59.12%** laundering labels, while the main test has
 - [ ] Teammates can see this document from the root `README.md`.
 - [ ] Yashasvi confirms he can locate the input data, run commands and understand the file responsibilities.
 - [ ] Sofia runs tests and `--sample` on her laptop, confirms the model interface, and if feasible reproduces `--full` and its output hashes.
+- [ ] Priyanka confirms tests and data preparation run on native Windows Python without `resource` errors.
 - [ ] All members approve the split-boundary policy before final metrics are frozen.
 - [ ] Priyanka understands main-test versus full-test evaluation and keeps test outcomes separate from model-selection decisions.
 - [ ] Any corrections go through reviewed Git commits/PRs rather than informal edits on `main`.
