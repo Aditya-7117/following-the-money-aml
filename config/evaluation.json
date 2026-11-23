@@ -1,0 +1,54 @@
+{
+  "config_version": "1.0",
+  "status": "provisional_awaiting_team_approval",
+  "positive_class": 1,
+  "join_key": "transaction_id",
+
+  "models_input": {
+    "folder": "artifacts/models/",
+    "files": "<model_name>.pkl, saved by scripts/train_models.py",
+    "contains": "fitted pipeline, val-chosen threshold, best parameters",
+    "models": ["logistic_regression", "naive_bayes", "decision_tree"],
+    "score": "predict_proba for the laundering class; higher = more suspicious"
+  },
+
+  "test_views": {
+    "test_main": ["test_main"],
+    "test_full": ["test_main", "test_tail"],
+    "note": "test_full contains test_main, so the two views are not independent. Never add their counts together."
+  },
+
+  "threshold_metrics": {
+    "flag_rule": "score >= threshold",
+    "threshold_source": "the threshold saved with each model (best F1)",
+    "test_rule": "the saved threshold is used unchanged on test",
+    "report": ["precision", "recall", "f1", "alert_fraction"]
+  },
+
+  "ranking_metrics": {
+    "average_precision": "scikit-learn average_precision_score",
+    "roc_auc": "scikit-learn roc_auc_score",
+    "alert_budget": 0.01,
+    "budget_rule": "alert the top ceil(0.01 * N) scores of the test view",
+    "tie_break": "smaller transaction_id first",
+    "report_ties": "number of rows tied at the cut-off score that did not get an alert",
+    "label": "batch-ranking comparison, not a live threshold guarantee"
+  },
+
+  "undefined_values": {
+    "precision_when_nothing_flagged": "n/a",
+    "recall_when_no_laundering": "n/a",
+    "pattern_with_no_test_examples": "n/a (not 0)"
+  },
+
+  "reference_models": {
+    "always_legitimate": "flags nothing (fixed rule, no threshold)",
+    "ach_rule": "flags every ACH payment (fixed rule, no threshold)"
+  },
+
+  "patterns_file": {
+    "path": "data/raw/HI-Small_Patterns.txt",
+    "use": "evaluation only, never for features or model training",
+    "ambiguous_matches": "reported and left out, never picked at random"
+  }
+}

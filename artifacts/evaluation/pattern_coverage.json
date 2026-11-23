@@ -1,0 +1,20 @@
+{
+  "attempts": 370,
+  "pattern_records": 3209,
+  "matched": 3209,
+  "unmatched": 0,
+  "ambiguous": 0,
+  "csv_laundering_rows": 5177,
+  "laundering_with_pattern": 3209,
+  "laundering_without_pattern": 1968,
+  "matched_per_pattern": {
+    "GATHER-SCATTER": 716,
+    "SCATTER-GATHER": 626,
+    "STACK": 466,
+    "FAN-OUT": 342,
+    "FAN-IN": 318,
+    "CYCLE": 287,
+    "BIPARTITE": 263,
+    "RANDOM": 191
+  }
+}
