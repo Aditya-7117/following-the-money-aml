@@ -30,7 +30,7 @@ Altman, E. et al. (2023). Realistic Synthetic Financial Transactions for Anti-Mo
 
 ## Quick start
 
-Use Python 3.12 on macOS or Linux.
+Python 3.12 is supported on macOS, Linux, and Windows (native or WSL). On native Windows, the Unix `resource` module is unavailable, so peak memory telemetry reports `N/A` in terminal summaries and `null` in `manifest.json` without affecting dataset processing or deterministic outputs. Note that native Windows compatibility remains to be confirmed on Windows hardware by teammates.
 
 Download the HI-Small dataset from the source
 linked above and place HI-Small_Trans.csv

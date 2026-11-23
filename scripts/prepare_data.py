@@ -20,13 +20,16 @@ import heapq
 import json
 import math
 import os
-import resource
 import sys
 import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator, Iterable
+try:
+    import resource
+except ImportError:
+    resource = None
 
 # Ensure project root is on sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -106,9 +109,14 @@ def _rel_path(p: str | Path) -> str:
         return path.name
 
 
-def get_peak_memory_mb() -> float:
-    """Return peak RSS memory in megabytes."""
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+def get_peak_memory_mb() -> float | None:
+    """Return peak RSS memory in megabytes, or None if resource is unavailable."""
+    if resource is None:
+        return None
+    try:
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    except (AttributeError, ValueError):
+        return None
     if sys.platform == "darwin":
         return rss / (1024 * 1024)
     return rss / 1024
@@ -717,7 +725,7 @@ def prepare_full(
         "candidate_splits": stream_res["candidate_splits"],
         "execution_metadata": {
             "elapsed_seconds": round(elapsed, 2),
-            "peak_memory_mb": round(peak_mb, 2),
+            "peak_memory_mb": round(peak_mb, 2) if peak_mb is not None else None,
             "chunk_size": chunk_size,
             "python_version": sys.version.split()[0],
             "platform": sys.platform,
@@ -782,7 +790,12 @@ def print_summary(summary: dict) -> None:
         print(f"  {i:2d}. {name}")
     print(f"Duplicate transaction_id count:  {summary['duplicate_id_count']}")
     print(f"Processing time:                 {summary['elapsed_seconds']:.2f} seconds")
-    print(f"Peak memory:                     {summary['peak_memory_mb']:.2f} MB")
+    peak_mem_str = (
+        f"{summary['peak_memory_mb']:.2f} MB"
+        if summary.get("peak_memory_mb") is not None
+        else "N/A"
+    )
+    print(f"Peak memory:                     {peak_mem_str}")
     if "raw_sha256" in summary:
         print(f"Raw input SHA-256:               {summary['raw_sha256']}")
     if "features_sha256" in summary:

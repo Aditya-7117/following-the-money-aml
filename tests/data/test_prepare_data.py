@@ -19,6 +19,9 @@ from scripts.prepare_data import (
     validate_prepared_data,
     save_sample_outputs,
     prepare_sample,
+    prepare_full,
+    get_peak_memory_mb,
+    print_summary,
     main,
     FEATURE_COLUMNS,
 )
@@ -595,6 +598,156 @@ class TestPrepareFullEndToEnd(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 main(["--sample", "--full"])
         self.assertEqual(ctx.exception.code, 1)
+
+
+class TestWindowsResourceCompatibility(unittest.TestCase):
+    """Verify graceful fallback when the Unix 'resource' module is unavailable (e.g. on Windows)."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.work_dir = Path(self.temp_dir.name)
+        self.csv_path = self.work_dir / "synthetic_raw.csv"
+        self.out_dir = self.work_dir / "processed"
+        self.art_dir = self.work_dir / "artifacts"
+
+        # Synthetic 5-row dataset with valid RAW_COLUMNS
+        rows = [
+            ["2022/09/01 00:01", "10", "100", "20", "200", "100.0", "US Dollar", "100.0", "US Dollar", "Cheque", "0"],
+            ["2022/09/01 00:02", "10", "100", "30", "300", "250.0", "US Dollar", "250.0", "US Dollar", "ACH", "0"],
+            ["2022/09/02 10:00", "20", "200", "10", "100", "50.0", "US Dollar", "50.0", "US Dollar", "Credit Card", "1"],
+            ["2022/09/07 12:00", "30", "300", "40", "400", "300.0", "US Dollar", "300.0", "US Dollar", "ACH", "0"],
+            ["2022/09/12 09:00", "40", "400", "50", "500", "400.0", "US Dollar", "400.0", "US Dollar", "ACH", "1"],
+        ]
+        _create_synthetic_csv(self.csv_path, rows)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_get_peak_memory_mb_returns_none_when_resource_is_none(self):
+        """When resource is None (as on native Windows), get_peak_memory_mb returns None."""
+        with patch("scripts.prepare_data.resource", None):
+            self.assertIsNone(get_peak_memory_mb())
+
+    def test_get_peak_memory_mb_handles_attribute_or_value_error(self):
+        """When resource lacks getrusage or raises ValueError/AttributeError, return None."""
+        class DummyResource:
+            def getrusage(self, *args):
+                raise AttributeError("no getrusage on this platform")
+
+        with patch("scripts.prepare_data.resource", DummyResource()):
+            self.assertIsNone(get_peak_memory_mb())
+
+    def test_print_summary_displays_na_when_memory_is_none(self):
+        """Terminal summary outputs 'N/A' when peak memory is None for both modes."""
+        base_summary = {
+            "processed_count": 100,
+            "earliest_timestamp": "2022/09/01 00:00",
+            "latest_timestamp": "2022/09/01 01:00",
+            "legitimate_count": 99,
+            "laundering_count": 1,
+            "feature_count": 10,
+            "feature_names": FEATURE_COLUMNS,
+            "duplicate_id_count": 0,
+            "elapsed_seconds": 1.23,
+            "peak_memory_mb": None,
+            "features_path": Path("dummy_features.csv"),
+            "labels_path": Path("dummy_labels.csv"),
+        }
+
+        # Sample mode
+        sample_sum = dict(base_summary, mode="sample")
+        stdout_capture = io.StringIO()
+        with patch("sys.stdout", stdout_capture):
+            print_summary(sample_sum)
+        output = stdout_capture.getvalue()
+        self.assertIn("Peak memory:                     N/A", output)
+
+        # Full mode
+        full_sum = dict(
+            base_summary,
+            mode="full",
+            raw_sha256="abc",
+            features_sha256="def",
+            labels_sha256="123",
+            split_assignments_sha256="456",
+            manifest_path=Path("dummy_manifest.json"),
+            split_assignments_path=Path("dummy_splits.csv"),
+        )
+        stdout_capture_full = io.StringIO()
+        with patch("sys.stdout", stdout_capture_full):
+            print_summary(full_sum)
+        output_full = stdout_capture_full.getvalue()
+        self.assertIn("Peak memory:                     N/A", output_full)
+
+    def test_print_summary_displays_formatted_mb_when_memory_present(self):
+        """Terminal summary formats peak memory as xx.xx MB when present."""
+        summary = {
+            "mode": "sample",
+            "processed_count": 50,
+            "earliest_timestamp": "2022/09/01 00:00",
+            "latest_timestamp": "2022/09/01 01:00",
+            "legitimate_count": 50,
+            "laundering_count": 0,
+            "feature_count": 10,
+            "feature_names": FEATURE_COLUMNS,
+            "duplicate_id_count": 0,
+            "elapsed_seconds": 0.5,
+            "peak_memory_mb": 42.1234,
+            "features_path": Path("dummy_features.csv"),
+            "labels_path": Path("dummy_labels.csv"),
+        }
+        stdout_capture = io.StringIO()
+        with patch("sys.stdout", stdout_capture):
+            print_summary(summary)
+        output = stdout_capture.getvalue()
+        self.assertIn("Peak memory:                     42.12 MB", output)
+
+    def test_sample_preparation_fallback_when_resource_is_none(self):
+        """prepare_sample succeeds with resource=None, producing peak_memory_mb=None."""
+        with patch("scripts.prepare_data.resource", None):
+            res = prepare_sample(
+                data_path=self.csv_path,
+                output_dir=self.out_dir,
+                sample_size=5,
+            )
+
+        self.assertIsNone(res["peak_memory_mb"])
+        self.assertEqual(res["processed_count"], 5)
+        self.assertTrue((self.out_dir / "sample_features.csv").exists())
+        self.assertTrue((self.out_dir / "sample_labels.csv").exists())
+        self.assertTrue((self.out_dir / "sample_split_assignments.csv").exists())
+
+    def test_full_preparation_and_manifest_fallback_when_resource_is_none(self):
+        """prepare_full succeeds with resource=None, recording peak_memory_mb=null in manifest."""
+        with patch("scripts.prepare_data.resource", None):
+            res = prepare_full(
+                data_path=self.csv_path,
+                output_dir=self.out_dir,
+                chunk_size=2,
+                artifacts_dir=self.art_dir,
+            )
+
+        self.assertIsNone(res["peak_memory_mb"])
+        self.assertEqual(res["processed_count"], 5)
+
+        # Verify output files exist
+        self.assertTrue((self.out_dir / "full_features.csv").exists())
+        self.assertTrue((self.out_dir / "full_labels.csv").exists())
+        self.assertTrue((self.out_dir / "full_split_assignments.csv").exists())
+        manifest_path = self.out_dir / "manifest.json"
+        self.assertTrue(manifest_path.exists())
+        self.assertTrue((self.art_dir / "data_checks.json").exists())
+
+        # Inspect parsed manifest.json
+        import json
+        with manifest_path.open("r", encoding="utf-8") as f:
+            manifest_data = json.load(f)
+
+        self.assertIsNone(manifest_data["execution_metadata"]["peak_memory_mb"])
+
+        # Inspect raw JSON text to ensure explicit 'null'
+        raw_manifest_text = manifest_path.read_text(encoding="utf-8")
+        self.assertIn('"peak_memory_mb": null', raw_manifest_text)
 
 
 if __name__ == "__main__":
