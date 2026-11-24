@@ -49,7 +49,7 @@ To reproduce: run the data pipeline, then open each notebook with the project's 
 
 **Evaluation (Priyanka)**
 - Report `test_main` on its own and with `test_tail`, as planned. The tail's feature distributions differ strongly from everything else, so results on it will not reflect normal conditions.
-- Test_main ends on a Saturday (10 Sept), when the laundering rate is highest (0.21%).
+- Test_main ends on a Saturday (10 Sept), when the laundering rate is highest (0.21%)
 
 **Split cutoffs (team decision)**
 - The provisional cutoffs give a chronological 60/20/20 split by rows. Val and test_main are similar (rates 0.107% and 0.113%; ACH share 12.1% and 13.6%; ACH rates 0.75% and 0.72%), which suits tuning on val and testing on test_main.
