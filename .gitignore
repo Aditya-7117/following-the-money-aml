@@ -19,3 +19,7 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+
+# Fitted baseline models - committed for team use
+!artifacts/models/*.pkl
+!artifacts/models/val_summary.json
