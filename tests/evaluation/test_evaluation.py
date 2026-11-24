@@ -38,10 +38,6 @@ LABELS = [1, 0, 1, 0, 0]
 SCORES = [0.9, 0.8, 0.4, 0.3, 0.1]
 
 
-def budget_frame(labels, scores, ids):
-    return pd.DataFrame({"transaction_id": ids, "is_laundering": labels, "score": scores})
-
-
 class TestThresholdMetrics(unittest.TestCase):
 
     def test_worked_example(self):
@@ -89,25 +85,36 @@ class TestRecallAtBudget(unittest.TestCase):
 
     def test_worked_example(self):
         # 20% of 5 rows = 1 alert, given to the 0.9 row (laundering)
-        r = recall_at_budget(budget_frame(LABELS, SCORES, [10, 11, 12, 13, 14]), budget=0.2)
-        self.assertEqual((r["alerts_allowed"], r["caught"]), (1, 1))
+        r = recall_at_budget(LABELS, SCORES, budget=0.2)
+        self.assertEqual(r["alerts_allowed"], 1)
+        self.assertAlmostEqual(r["expected_caught"], 1.0)
         self.assertAlmostEqual(r["recall_at_budget"], 0.5)
-        self.assertEqual(r["tied_rows_left_out"], 0)
+        self.assertEqual(r["rows_tied_at_cutoff"], 1)
 
     def test_budget_rounds_up(self):
-        self.assertEqual(recall_at_budget(budget_frame([0] * 101, [0.5] * 101, range(101)), 0.01)["alerts_allowed"], 2)
-        self.assertEqual(recall_at_budget(budget_frame([0] * 100, [0.5] * 100, range(100)), 0.07)["alerts_allowed"], 7)
+        self.assertEqual(recall_at_budget([0] * 101, [0.5] * 101, 0.01)["alerts_allowed"], 2)
+        self.assertEqual(recall_at_budget([0] * 100, [0.5] * 100, 0.07)["alerts_allowed"], 7)
 
-    def test_ties_go_to_smallest_id(self):
-        # all scores equal, so only the ID decides: ID 1 gets the alert
-        r = recall_at_budget(budget_frame([0, 0, 0, 0, 1], [0.0] * 5, [5, 4, 3, 2, 1]), 0.2)
-        self.assertEqual(r["caught"], 1)
-        self.assertEqual(r["tied_rows_left_out"], 4)
+    def test_ties_share_the_alerts_evenly(self):
+        # 2 alerts; 0.9 is alerted for sure, then 1 slot for 4 rows tied at 0.5
+        # (1 of them laundering): expected caught = 1 + 1 * 1/4 = 1.25
+        r = recall_at_budget([1, 0, 0, 1, 0], [0.9, 0.5, 0.5, 0.5, 0.5], budget=0.4)
+        self.assertAlmostEqual(r["expected_caught"], 1.25)
+        self.assertAlmostEqual(r["recall_at_budget"], 1.25 / 2)
+        self.assertEqual(r["rows_tied_at_cutoff"], 4)
 
-    def test_labels_do_not_choose_the_alerts(self):
-        # laundering moved to another row: ID 1 is still the one alerted
-        r = recall_at_budget(budget_frame([1, 0, 0, 0, 0], [0.0] * 5, [5, 4, 3, 2, 1]), 0.2)
-        self.assertEqual(r["caught"], 0)
+    def test_no_skill_model_catches_its_share_only(self):
+        # every score the same: a 1% budget catches 1% of the laundering
+        labels = [1] * 10 + [0] * 990
+        r = recall_at_budget(labels, [0.0] * 1000, budget=0.01)
+        self.assertAlmostEqual(r["recall_at_budget"], 0.01)
+
+    def test_row_order_does_not_matter(self):
+        labels = [1, 0, 0, 0, 0, 1, 0, 0]
+        scores = [0.2, 0.2, 0.2, 0.9, 0.1, 0.2, 0.3, 0.1]
+        first = recall_at_budget(labels, scores, 0.25)
+        second = recall_at_budget(labels[::-1], scores[::-1], 0.25)
+        self.assertAlmostEqual(first["expected_caught"], second["expected_caught"])
 
 
 class TestResultsTables(unittest.TestCase):

@@ -87,11 +87,10 @@ def build_tables(scores, thresholds, views, budget):
                 "roc_auc": roc_auc(y, s),
             })
 
-            ranked = part[["transaction_id", "is_laundering"]].assign(score=s)
             budget_rows.append({
                 "model": model,
                 "test_view": view,
-                **recall_at_budget(ranked, budget),
+                **recall_at_budget(y, s, budget),
             })
 
     return pd.DataFrame(results), pd.DataFrame(budget_rows)

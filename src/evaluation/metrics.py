@@ -55,36 +55,36 @@ def roc_auc(y_true, scores):
     return roc_auc_score(y_true, scores)
 
 
-def recall_at_budget(df, budget=0.01):
+def recall_at_budget(y_true, scores, budget=0.01):
     """Alert only the top 1% of scores and measure how much laundering we catch.
 
-    df needs the columns: transaction_id, is_laundering, score.
-    Ties in score are broken by the smaller transaction_id, so the result
-    is the same every time. The labels are only used AFTER the alerts are
-    chosen. This is a batch-ranking comparison, not a live threshold.
+    If several rows share the score at the cut-off, they share the alerts
+    that are left evenly (the expected result of a fair random tie-break).
+    We do not use row order or transaction_id here: IDs follow the order
+    of the raw file, which is not random. This is a batch-ranking
+    comparison, not a live threshold.
     """
+    y = np.asarray(y_true)
+    s = np.asarray(scores)
+
     # round() stops float noise, e.g. 0.07 * 100 = 7.000000000000001
-    n_alerts = math.ceil(round(budget * len(df), 9))
+    n_alerts = math.ceil(round(budget * len(s), 9))
+    total = int(y.sum())
+    expected_caught, tied_rows = 0.0, 0
 
-    ranked = df.sort_values(["score", "transaction_id"], ascending=[False, True])
-    alerted = ranked.head(n_alerts)
-    not_alerted = ranked.iloc[n_alerts:]
-
-    caught = int(alerted["is_laundering"].sum())
-    total = int(df["is_laundering"].sum())
-
-    # If many rows share the cut-off score, the ID (not the model) decided
-    # who got an alert. We count those rows so the report can say so.
-    tied_left_out = 0
     if n_alerts > 0:
-        cutoff_score = alerted["score"].iloc[-1]
-        tied_left_out = int((not_alerted["score"] == cutoff_score).sum())
+        cutoff = np.sort(s)[::-1][n_alerts - 1]    # score of the last alert
+        above = s > cutoff                          # always alerted
+        tied = s == cutoff                          # share the slots left
+        slots_left = n_alerts - int(above.sum())
+        expected_caught = y[above].sum() + slots_left * y[tied].sum() / tied.sum()
+        tied_rows = int(tied.sum())
 
     return {
-        "n_rows": len(df),
+        "n_rows": len(s),
         "alerts_allowed": n_alerts,
         "laundering_rows": total,
-        "caught": caught,
-        "recall_at_budget": caught / total if total else np.nan,
-        "tied_rows_left_out": tied_left_out,
+        "expected_caught": float(expected_caught),
+        "recall_at_budget": expected_caught / total if total else np.nan,
+        "rows_tied_at_cutoff": tied_rows,
     }

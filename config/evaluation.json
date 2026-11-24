@@ -13,7 +13,7 @@
     "test_full": "test_full = test_main + test_tail. It contains test_main, so the two views are not independent.",
     "baselines": "always_legitimate flags nothing; ach_rule flags every ACH payment.",
     "undefined_values": "Precision with no alerts, or recall with no laundering, is written as n/a, never 0.",
-    "alert_budget": "The top ceil(budget x rows) scores get an alert; ties go to the smaller transaction_id. This is a batch-ranking comparison, not a live threshold.",
+    "alert_budget": "The top ceil(budget x rows) scores get an alert. Rows tied at the cut-off share the remaining alerts evenly (expected result of a random tie-break), because transaction IDs follow the raw file order, which is not random. This is a batch-ranking comparison, not a live threshold.",
     "patterns": "HI-Small_Patterns.txt is used for evaluation only. Records are matched to transactions on all 11 raw fields; ambiguous matches are left out."
   }
 }
