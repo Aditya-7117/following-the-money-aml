@@ -53,3 +53,25 @@ def chi_square_test(df, column, label=LABEL_COLUMN):
         "min_expected_count": round(float(expected.min()), 1),
         "n": int(n),
     }
+
+
+def mann_whitney_test(df, column, label=LABEL_COLUMN):
+    """Compare a numeric column between laundering (1) and legitimate (0) payments.
+
+    auc is the probability that a random laundering payment has a higher value
+    than a random legitimate one (0.5 = no difference). rank_biserial = 2*auc - 1.
+    """
+    laundering = df.loc[df[label] == 1, column]
+    legitimate = df.loc[df[label] == 0, column]
+    u_stat, p_value = stats.mannwhitneyu(laundering, legitimate, alternative="two-sided", method="asymptotic")
+    auc = u_stat / (len(laundering) * len(legitimate))
+    return {
+        "column": column,
+        "median_laundering": float(laundering.median()),
+        "median_legitimate": float(legitimate.median()),
+        "mean_laundering": round(float(laundering.mean()), 2),
+        "mean_legitimate": round(float(legitimate.mean()), 2),
+        "p_value": float(p_value),
+        "auc": round(float(auc), 4),
+        "rank_biserial": round(float(2 * auc - 1), 4),
+    }
