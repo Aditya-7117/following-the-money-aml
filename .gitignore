@@ -5,7 +5,10 @@ HI-*_Trans.csv
 HI-*_Patterns.txt
 
 # Large generated outputs stay local
-artifacts/models/
+artifacts/models/*.csv
+artifacts/models/*.png
+!artifacts/models/*.pkl
+!artifacts/models/val_summary.json
 artifacts/scores/
 
 # Python and notebooks
