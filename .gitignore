@@ -5,8 +5,13 @@ HI-*_Trans.csv
 HI-*_Patterns.txt
 
 # Large generated outputs stay local
-artifacts/models/
+artifacts/models/*.csv
+artifacts/models/*.png
 artifacts/scores/
+
+# Allow fitted model files and validation results
+!artifacts/models/*.pkl
+!artifacts/models/val_summary.json
 
 # Python and notebooks
 __pycache__/
